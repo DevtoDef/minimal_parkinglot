@@ -1,0 +1,34 @@
+{
+  "name": "minimal-parking-lot",
+  "version": "1.0.0",
+  "description": "create an app that can manage a parking lot with phone's app",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --watch index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/pepesolution/products/minimal-parking-lot.git"
+  },
+  "keywords": [
+    "parking",
+    "lot",
+    "app"
+  ],
+  "author": "pepe solution",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/pepesolution/products/minimal-parking-lot/issues"
+  },
+  "homepage": "https://gitlab.com/pepesolution/products/minimal-parking-lot#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.12.0",
+    "sequelize": "^6.37.5"
+  }
+}
