@@ -8,7 +8,7 @@ const cookieParser = require('cookie-parser');
 const sequelize = require('./config/db/index');
 
 //Create Relation
-const CreateRelation = require('./models/Ralation');
+const CreateRelation = require('./models/Relation');
 // Middleware để parse JSON
 app.use(express.json());
 // Middleware để parse cookie

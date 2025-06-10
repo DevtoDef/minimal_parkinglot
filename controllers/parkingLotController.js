@@ -91,6 +91,9 @@ class parkingLotController {
     //[POST] parkingLot/:id/newVehicle
     addNewVehicle = async (req, res) => {
         try {
+            if (!checkInImages) {
+            return res.status(400).json({ success: false, message: 'checkInImages is required.' })
+            };
             const currentUser = await User.findOne({ where: { username: req.user }});
             const newVehicle = await Vehicle.create({
                 checkInImages: req.body.checkInImages,
@@ -150,7 +153,7 @@ class parkingLotController {
             const currentParkingLot = await ParkingLot.findByPk(req.params.id);
             if (!currentParkingLot) return res.status(404).json({ success: false, message: "ParkingLot not found" });
             return res.status(200).json({
-                success: true, currentParkingLot});
+                success: true, data: currentParkingLot});
         } catch (err) {
             return res.status(500).json({ success: false, "Error when fetching ParkingLot Data": err.message });
         }

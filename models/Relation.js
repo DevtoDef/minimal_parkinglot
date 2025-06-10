@@ -21,7 +21,7 @@ CreateRelation = async () => {
         Vehicle.belongsTo(User, { foreignKey: 'userId' });
         
         //Async với database
-        await sequelize.sync(); 
+        // await sequelize.sync(); 
     } catch (err) {
         console.log('Error when creating relationships', err)
     }
