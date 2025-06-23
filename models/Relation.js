@@ -1,5 +1,5 @@
 const User = require('./User');
-const ParkingLot = require('./Parkinglot');
+const ParkingLot = require('./ParkingLot');
 const Vehicle = require('./Vehicle');
 const { Sequelize, DataTypes, Model } = require('sequelize');
 const sequelize = require('../config/db/index');

@@ -1,30 +1,38 @@
 const User = require('../models/User');
+const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
+const e = require('express');
 const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
 
 class authController {
-    //[POST] /auth/register
+    //[POST] /auth/signup
     registerUser = async (req, res) => {
+        const email = req.body.email;
         const username = req.body.username;
         const pwd = req.body.password;
-        if (!username || !pwd) return res.status(400).json({ success: false, message: 'Username và password là bắt buộc' });
-        const duplicate = await User.findOne({ where: { username: username }});
+        if (!username || !pwd || !email) return res.status(400).json({ success: false, message: 'Username và password là bắt buộc' });
+        const duplicate = await User.findOne({ where: {  [Op.or]: [{ username: username }, { email: email }] }});
         if (duplicate) return res.status(409).json({ success: false, message: 'Người dùng đã tồn tại' });
         // Lưu vào database
         try {
             //encrypted password
             const hashPwd = await bcrypt.hash(pwd, 10);
             //store user
-            const newUser = User.create({
+            const newUser = await User.create({
+                "email": email,
                 "username": username,
                 "password": hashPwd
             });
-            console.log(newUser)
             res.status(201).json({ 
                 success: true,
-                message: `User ${username} created successfully!`
+                message: `User ${username} created successfully!`,
+                data: {
+                    id: newUser.id,
+                    username: newUser.username,
+                    role: newUser.role,
+                }
              })
         } catch (err) {
             res.status(500).json({ success: false, 'message': err.message })
@@ -55,12 +63,40 @@ class authController {
                 sucess: true,
                 message: 'Đăng nhập thành công',
                 data : {
+                    id: foundUser.id,
+                    username: foundUser.username,
+                    role: foundUser.role,
                     accessToken: accessToken
                 },
             })    
         } else {
             return res.status(401).json({ success: false, message: 'Sai mật khẩu' })
         }
+    };
+
+    //[GET] /auth
+    getUserData = async (req, res) => {
+        try {
+        // Lấy thông tin người dùng từ token
+            const username = req.user;
+            console.log(username);
+            if (!username) return res.status(401).json({ success: false, message: 'Unauthorized' });
+            const userInfo = await User.findOne({ where: { username: username }});
+            if (!userInfo) return res.status(404).json({ success: false, message: 'User not found' });
+            // Trả về thông tin người dùng
+            return res.status(200).json({
+                success: true,
+                data: {
+                    id: userInfo.id,
+                    email: userInfo.email,
+                    username: userInfo.username,
+                    role: userInfo.role
+                }
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ success: false, message: 'Internal Server Error' });
+        } 
     };
 
     logoutUser = async (req, res) => {

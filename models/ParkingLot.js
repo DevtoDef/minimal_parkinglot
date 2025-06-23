@@ -10,11 +10,20 @@ const Parkinglot = sequelize.define('ParkingLot', {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
     },
-    // capacity: {
-    //     type: DataTypes.INTEGER,
-    //     allowNull: false
-    // },
+    maxspace: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    currentspace: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false
+    },
     name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    address: {
         type: DataTypes.STRING(255),
         allowNull: false
     },
