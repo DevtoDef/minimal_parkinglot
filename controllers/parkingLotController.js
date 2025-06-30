@@ -189,7 +189,7 @@ class parkingLotController {
     //[PUT] parkingLot/checkout/:vehicleId - Cập nhật giờ checkout trong database
     checkoutVehicle = async (req, res) => {
         try {
-        const result = await sequelize.transaction(async (t) => {
+        const result = await sequelgitize.transaction(async (t) => {
             const { vehicleId } = req.params;
 
             // 1. TÌM XE VÀ LẤY LUÔN THÔNG TIN BÃI XE TƯƠNG ỨNG (DÙNG INCLUDE)
@@ -277,4 +277,4 @@ class parkingLotController {
     }
 }
 
-module.exports = new parkingLotController;
+module.exports = new parkingLotController();
