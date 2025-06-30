@@ -24,12 +24,15 @@
   "homepage": "https://gitlab.com/pepesolution/products/minimal-parking-lot#readme",
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
     "mysql2": "^3.12.0",
-    "sequelize": "^6.37.5"
+    "sequelize": "^6.37.5",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "sequelize-cli": "^6.6.3"

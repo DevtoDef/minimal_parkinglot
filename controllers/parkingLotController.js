@@ -1,7 +1,10 @@
-const ParkingLot = require('../models/ParkingLot');
+const ParkingLot = require('../models/Parkinglot');
 const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
-const Sequelize = require('sequelize');
+const sequelize = require('../config/db/index');
+const cloudinary = require('../config/db/cloudinary');
+const { DataTypes } = require('sequelize');
+const { v4:uuidv4 } = require('uuid');
 
 
 class parkingLotController {
@@ -12,8 +15,7 @@ class parkingLotController {
             const userParkingData = await User.findOne({ 
                 where: { username: req.user },
                 include: {
-                    model: ParkingLot,
-                    attributes: ['id', 'name', 'address'], // Chỉ lấy các trường cần thiết từ bảng ParkingLot
+                    model: ParkingLot, // Chỉ lấy các trường cần thiết từ bảng ParkingLot
                     through: {
                         attributes: [], // Chỉ lấy các trường cần thiết từ bảng UserParkingLot
                     },
@@ -29,7 +31,6 @@ class parkingLotController {
             }
             // Trích xuất danh sách các bãi xe từ kết quả
             const parkingLots = userParkingData.ParkingLots;
-
             return res.status(200).json({
                 success: true,
                 message: 'Lấy danh sách bãi xe thành công.',
@@ -96,65 +97,74 @@ class parkingLotController {
     //[POST] parkingLot/:id/newVehicle
     addNewVehicle = async (req, res) => {
         try {
-        // Bắt đầu transaction và nhận về kết quả là newVehicle
-        const result = await sequelize.transaction(async (t) => {
-            const { checkInImages, license_plate } = req.body;
-            const parkingLotId = req.params.id;
+        const checkInImages = req.file;
+        const license_plate = req.body.license_plate;
+        const parkingLotId = req.params.id;
+        console.log(req.body);
 
-            // 1. Tìm bãi xe và khóa nó lại trong transaction
+        if (!checkInImages) {
+            return res.status(400).json({ success: false, message: 'checkInImages is required.' });
+        }
+        const nfc_card_id = uuidv4();
+        
+        // BƯỚC 1: XỬ LÝ UPLOAD ẢNH RA NGOÀI TRANSACTION
+        // Nếu upload lỗi, hàm sẽ dừng lại ngay đây, không ảnh hưởng đến database.
+        const image_res = await cloudinary.v2.uploader.upload(checkInImages.path, {
+            folder: `parking_lot_images/${parkingLotId}`,
+            public_id: nfc_card_id,
+            unique_filename: true,
+            resource_type: 'image'
+        });
+
+        // BƯỚC 2: BẮT ĐẦU DATABASE TRANSACTION SAU KHI ĐÃ CÓ URL ẢNH
+        const result = await sequelize.transaction(async (t) => {
+            
+            // Tìm bãi xe và khóa nó lại trong transaction
             const parkingLot = await ParkingLot.findByPk(parkingLotId, {
-                lock: t.LOCK.UPDATE, // Khóa dòng này
-                transaction: t       // Báo cho lệnh này biết nó thuộc transaction 't'
+                lock: t.LOCK.UPDATE,
+                transaction: t
             });
 
-            if (!parkingLot) {
-                // Ném lỗi sẽ tự động khiến transaction bị ROLLBACK
-                throw new Error('ParkingLot not found.');
-            }
+            if (!parkingLot) throw new Error('ParkingLot not found.');
+            if (parkingLot.currentspace >= parkingLot.maxspace) throw new Error('ParkingLot is full.');
 
-            // 2. Kiểm tra chỗ trống
-            if (parkingLot.currentspace >= parkingLot.maxspace) {
-                throw new Error('ParkingLot is full.');
-            }
-
-            // 3. Tìm người dùng
+            // Tìm người dùng
             const currentUser = await User.findOne({ 
                 where: { username: req.user }, 
                 transaction: t 
             });
-            if (!currentUser) {
-                throw new Error('User not found.');
-            }
-
-            // 4. Tạo xe mới
+            if (!currentUser) throw new Error('User not found.');
+            
+            // Tạo xe mới với URL ảnh đã có sẵn
             const newVehicle = await Vehicle.create({
-                checkInImages: checkInImages,
+                nfc_card_id: nfc_card_id,
+                checkInImages: image_res.secure_url, // Dùng URL từ kết quả upload
                 license_plate: license_plate,
                 parkingLotId: parkingLotId,
                 userId: currentUser.id
             }, { transaction: t });
 
-            // 5. Cập nhật số lượng một cách an toàn
-            // Không cần save() nữa vì increment là một lệnh ghi trực tiếp
+            // Cập nhật số lượng
             await parkingLot.increment('currentspace', { by: 1, transaction: t });
 
-            // Trả về newVehicle để 'result' có thể nhận được
             return newVehicle;
         });
 
-        // Nếu transaction thành công, 'result' sẽ là 'newVehicle'
+        // Nếu transaction thành công
         return res.status(201).json({
             success: true,
             message: "Thêm xe mới thành công",
             data: {
-                nfc_card_id: result.nfc_card_id,
+                id: result.id,
+                license_plate: result.license_plate,
+                checkInImages: result.checkInImages,
+                nfc_card_id: nfc_card_id,
             },
         });
 
     } catch (err) {
-        // Bất kỳ lỗi nào (kể cả lỗi ta tự ném ra) đều sẽ được bắt ở đây
-        // Transaction đã được tự động rollback
-        console.error('ADD VEHICLE TRANSACTION FAILED:', err);
+        // Bắt lỗi cho cả việc upload và transaction
+        console.error('ADD VEHICLE FAILED:', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };
