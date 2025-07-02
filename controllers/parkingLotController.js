@@ -169,6 +169,51 @@ class parkingLotController {
     }
 };
 
+    //[DELETE] parkingLot/deleteVehicle/:vehicleId
+    deleteVehicle = async (req, res) => {
+        console.log('deleting vehicle ....!')
+        const vehicleId = req.params.vehicleId;
+        const t = await sequelize.transaction();
+        try {
+            // Tìm xe cần xóa trong transaction
+        
+        const vehicle = await Vehicle.findByPk(vehicleId, { transaction: t });
+
+        if (!vehicle) {
+            await t.rollback();
+            console.log('No vehicle found')
+            return res.status(404).json({ success: false, message: 'Vehicle not found.' });
+        }
+
+        // 1. Xóa ảnh trên Cloudinary
+        // Cloudinary SDK v2 không trả về lỗi nếu file không tồn tại, nên khá an toàn.
+        // Tên file (public_id) chính là nfc_card_id của xe.
+        if (vehicle.nfc_card_id) {
+            await cloudinary.v2.uploader.destroy(`parking_lot_images/${vehicle.parkingLotId}/${vehicle.nfc_card_id}`);
+        }
+
+        // 2. Tìm bãi xe để cập nhật lại số lượng
+        const parkingLot = await ParkingLot.findByPk(vehicle.parkingLotId, { transaction: t });
+        
+        // 3. Xóa bản ghi xe khỏi database
+        await vehicle.destroy({ transaction: t });
+
+        // 4. Giảm số lượng xe trong bãi (nếu tìm thấy bãi xe)
+        if (parkingLot && parkingLot.currentspace > 0) {
+            await parkingLot.decrement('currentspace', { by: 1, transaction: t });
+        }
+
+        // Nếu tất cả thành công, commit transaction
+        await t.commit();
+
+        return res.status(200).json({ success: true, message: 'Vehicle check-in cancelled and data cleaned up.' });
+        } catch (error) {
+            await t.rollback();
+            console.error('DELETE VEHICLE FAILED:', err);
+            res.status(500).json({ success:false, message: `Xảy ra lỗi trong quá trình hủy thẻ: ${error}`})
+        }
+    }
+
     //[GET] parkingLot/nfc/:nfc_id - Lấy dữ liệu xe trong database
     getVehicleByNFC = async (req, res) => {
         try {
@@ -186,17 +231,19 @@ class parkingLotController {
         }
     };
 
-    //[PUT] parkingLot/checkout/:vehicleId - Cập nhật giờ checkout trong database
+    
+
+    //[PUT] parkingLot/checkout/:nfc_card_id - Cập nhật giờ checkout trong database
     checkoutVehicle = async (req, res) => {
         try {
-        const result = await sequelgitize.transaction(async (t) => {
-            const { vehicleId } = req.params;
+        const result = await sequelize.transaction(async (t) => {
+            const { nfc_card_id } = req.params;
 
             // 1. TÌM XE VÀ LẤY LUÔN THÔNG TIN BÃI XE TƯƠNG ỨNG (DÙNG INCLUDE)
             // Thao tác này giúp giảm từ 2 xuống còn 1 lần gọi database
             const vehicle = await Vehicle.findOne({
                 where: {
-                    id: vehicleId,
+                    nfc_card_id: nfc_card_id,
                     status: 'PARKED'
                 },
                 include: {

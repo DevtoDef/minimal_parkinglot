@@ -12,8 +12,9 @@ router.get('/:id', parkingLotController.getVehicle);
 router.get('/:id/edit', verifyRole("admin"), parkingLotController.editParkingLot);
 router.put('/:id/edit', verifyRole("admin"), parkingLotController.updateParkingLot);
 router.post('/:id/newVehicle', upload.single('checkInImages'), parkingLotController.addNewVehicle);
+router.delete('/deleteVehicle/:vehicleId', parkingLotController.deleteVehicle);
 router.get('/nfc/:nfc_id', parkingLotController.getVehicleByNFC);
-router.put('/checkout/:vehicleId', parkingLotController.checkoutVehicle);
+router.put('/checkout/:nfc_card_id', parkingLotController.checkoutVehicle);
 
 
 module.exports = router;
